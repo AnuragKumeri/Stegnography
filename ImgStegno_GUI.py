@@ -1,4 +1,6 @@
-
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+import base64
 from tkinter import *
 import tkinter.filedialog
 from tkinter import messagebox
@@ -9,6 +11,25 @@ import os
 
 class IMG_Stegno:
     output_image_size = 0
+    #AES Encryption
+    def aes_encrypt(self, plaintext, key):
+        key = key.ljust(16)[:16].encode() #AES128
+        cipher = AES.new(key, AES.MODE_EAX)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode())
+        encrypted_data = cipher.nonce + tag + ciphertext
+        return base64.b64encode(encrypted_data).decode()
+
+    #AES Decryption
+    def aes_decrypt(self, encrypted_data, key):
+        key = key.ljust(16)[:16].encode()
+        encrypted_data = base64.b64decode(encrypted_data)
+        nonce = encrypted_data[:16]
+        tag = encrypted_data[16:32]
+        ciphertext = encrypted_data[32:]
+        cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+        return plaintext.decode()
+        
 
     #main frame or start page
     def main(self, root):
@@ -104,7 +125,7 @@ class IMG_Stegno:
             encode_button = Button(e_pg, text='Cancel', command=lambda : IMG_Stegno.back(self,e_pg))
             encode_button.config(font=('Helvetica',14), bg='#e8c1c7')
             data = text_a.get("1.0", "end-1c")
-            button_back = Button(e_pg, text='Encode', command=lambda : [self.enc_fun(text_a,my_img),IMG_Stegno.back(self,e_pg)])
+            button_back = Button(e_pg, text='Encode', command=lambda : [self.enc_fun(text_a, my_img),IMG_Stegno.back(self,e_pg)])
             button_back.config(font=('Helvetica',14), bg='#e8c1c7')
             button_back.grid(pady=15)
             encode_button.grid()
@@ -129,11 +150,13 @@ class IMG_Stegno:
             board.image = img
             board.grid()
             hidden_data = self.decode(my_img)
+            secret_key = 'mysecretkey'
+            decrypted_data = self.aes_decrypt(hidden_data, secret_key)
             label2 = Label(d_F3, text='Hidden data is :')
             label2.config(font=('Helvetica',14,'bold'))
             label2.grid(pady=10)
             text_a = Text(d_F3, width=50, height=10)
-            text_a.insert(INSERT, hidden_data)
+            text_a.insert(INSERT, decrypted_data)
             text_a.configure(state='disabled')
             text_a.grid()
             button_back = Button(d_F3, text='Cancel', command= lambda:self.frame_3(d_F3))
@@ -206,11 +229,11 @@ class IMG_Stegno:
     
     
     #function to enter the data pixels in image
-    def encode_enc(self,newImg, data):
+    def encode_enc(self,newImg, encrypted_data):
         w = newImg.size[0]
         (x, y) = (0, 0)
 
-        for pixel in self.modify_Pix(newImg.getdata(), data):
+        for pixel in self.modify_Pix(newImg.getdata(), encrypted_data):
 
             # Putting modified pixels in the new image
             newImg.putpixel((x, y), pixel)
@@ -224,11 +247,13 @@ class IMG_Stegno:
     #function to enter hidden text
     def enc_fun(self,text_a,myImg):
         data = text_a.get("1.0", "end-1c")
+        secret_key = 'mysecretkey'
+        encrypted_data = self.aes_encrypt(data, secret_key)
         if (len(data) == 0):
             messagebox.showinfo("Alert","Kindly enter text in TextBox")
         else:
             newImg = myImg.copy()
-            self.encode_enc(newImg, data)
+            self.encode_enc(newImg, encrypted_data)
             my_file = BytesIO()
             temp=os.path.splitext(os.path.basename(myImg.filename))[0]
             newImg.save(tkinter.filedialog.asksaveasfilename(initialfile=temp,filetypes = ([('png', '*.png')]),defaultextension=".png"))
