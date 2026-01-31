@@ -1,5 +1,6 @@
 # Image Steganography with AES Encryption
 1. Introduction
+
 This project implements a secure image steganography system using Least Significant Bit (LSB) technique combined with AES encryption. The application allows users to hide encrypted text inside an image and later extract and decrypt the hidden message using the correct secret key.
 
 A Tkinter-based GUI is provided to make the encoding and decoding process simple and user-friendly.
